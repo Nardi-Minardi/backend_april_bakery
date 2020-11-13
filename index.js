@@ -4,40 +4,54 @@ require('dotenv').config()
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
-const cors = require ('cors');
+const cors = require('cors');
 
-// import router dan mongodb
-const Router = require('./src/routes');
+const fileUpload = require('express-fileupload')
+const cookieParser = require('cookie-parser')
 const mongoose = require('mongoose');
 
-// koneksi ke database mongodb url 27017
+
+// connection mongodb url 27017
 mongoose.connect(process.env.MONGO_URL, {
+    useCreateIndex: true,
+    useFindAndModify: false,
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
 .then(res => {
-    console.log('Database terhubung')
+    console.log('Connected to MongoDB')
 })
 .catch(e => {
-    console.log('Database error, tidak terhubung')
+    console.log('Cannot connected to MongoDB')
 })
 
-// input value api dengan json dan x.www-from-urlencoded di postman
+// middleware express 
 app.use(bodyParser.urlencoded({
-    extended: false
+    extended: true
+})); // to support URL - encoded bodies
+app.use(bodyParser.json()); // to support JSON-encode bodies
+app.use(cookieParser());
+app.use(express.static(__dirname + '/public'));
+app.use(fileUpload({
+    useTempFiles: true
 }));
-app.use(bodyParser.json());
-app.use('/uploads', express.static('uploads'));
-app.use(cors())
 
-//endpoint default
-app.use('/', Router, (req, res, next) => {
-    res.send('Ini halaman route')
-    next();
-})
+// cors error
+app.use(cors());
 
-// listening port ke database
+//Routes
+app.use('/v1', require('./src/routes/usersRoute'))
+app.use('/v1', require('./src/routes/categoriesRoute'))
+app.use('/v1', require('./src/routes/productsRoute'))
+app.use('/v1', require('./src/routes/ordersRoute'))
+app.use('/v1', require('./src/routes/upload'))
+
+//endpoint default port 3001
+app.use('/', (req, res) => {
+    res.json({ msg: "REST API APRIL'S BAKERY" })
+});
+
+// listening port database
 app.listen(process.env.PORT, (req, res) => {
-    // memakai backtip agar bisa memanggil variable di dalam string
     console.log(`Server is runing ${process.env.PORT}`)
-})
+});
